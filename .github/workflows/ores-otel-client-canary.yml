@@ -1,0 +1,72 @@
+name: ORES OTEL client policy canary
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  client-policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ORES_OTEL_RUNTIME: ${{ github.workspace }}/_canary/ores-otel-runtime
+      OPTO_CLIENT_ROOT: ${{ github.workspace }}/_canary/opto-sync-clients
+    steps:
+      - name: Check out test harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          show-progress: false
+
+      - name: Check out exact public ORES OTEL runtime
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ores-otel/ores.otel.log
+          ref: 277aa47c7da94da921070f1e202574222b383f90
+          path: _canary/ores-otel-runtime
+          persist-credentials: false
+          show-progress: false
+
+      - name: Check out exact production Opto client PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: opto-sync/opto-sync-clients
+          ref: 4c99118240fad6fc9ac678d7238257262540081f
+          path: _canary/opto-sync-clients
+          persist-credentials: false
+          show-progress: false
+
+      - name: Verify immutable source heads
+        run: |
+          set -euo pipefail
+          test "$(git -C _canary/ores-otel-runtime rev-parse HEAD)" = 277aa47c7da94da921070f1e202574222b383f90
+          test "$(git -C _canary/opto-sync-clients rev-parse HEAD)" = 4c99118240fad6fc9ac678d7238257262540081f
+
+      - name: Install Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Install and build exact ORES OTEL runtime
+        working-directory: _canary/ores-otel-runtime
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx tsc -p tsconfig.build.json
+          node -e "require('node:fs').chmodSync('dist/cli/main.js', 0o755)"
+
+      - name: Re-run canonical ORES OTEL config suite
+        working-directory: _canary/ores-otel-runtime
+        run: node --test tests/ores-otel-config.test.mjs
+
+      - name: Exercise exact Opto client policy and adversarial mutations
+        run: node --test tests/ores_otel_client_canary.mjs
+
+      - name: Prove canary did not rewrite product sources
+        run: |
+          git -C _canary/ores-otel-runtime diff --exit-code -- src tests contracts package.json package-lock.json
+          git -C _canary/opto-sync-clients diff --exit-code
