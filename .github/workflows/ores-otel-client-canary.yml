@@ -30,11 +30,11 @@ jobs:
           persist-credentials: false
           show-progress: false
 
-      - name: Check out exact production Opto client PR head
+      - name: Check out exact merged production Opto client head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: opto-sync/opto-sync-clients
-          ref: 4c99118240fad6fc9ac678d7238257262540081f
+          ref: e0af47f8588a79eda30c53965cbc22a990aa05bf
           path: _canary/opto-sync-clients
           persist-credentials: false
           show-progress: false
@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C _canary/ores-otel-runtime rev-parse HEAD)" = 277aa47c7da94da921070f1e202574222b383f90
-          test "$(git -C _canary/opto-sync-clients rev-parse HEAD)" = 4c99118240fad6fc9ac678d7238257262540081f
+          test "$(git -C _canary/opto-sync-clients rev-parse HEAD)" = e0af47f8588a79eda30c53965cbc22a990aa05bf
 
       - name: Install Node 22
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
