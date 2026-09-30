@@ -1,0 +1,81 @@
+name: prove ores-reactive-maps pr 6
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/prove-ores-reactive-maps-6.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REPOSITORY: ORESoftware/ores-reactive-maps
+  SOURCE_SHA: 717ad61d1bbd84d741104974e7e001aa7521c5bc
+
+jobs:
+  exact-head-conformance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out carrier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Check out exact source candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ env.SOURCE_SHA }}
+          path: source
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact source SHA
+        working-directory: source
+        run: |
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$SOURCE_SHA"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.23.x'
+          cache: false
+
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+        with:
+          toolchain: stable
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
+        with:
+          otp-version: '27.3'
+          gleam-version: '1.15.4'
+          rebar3-version: '3'
+
+      - name: Enforce contracts conformance and governance
+        working-directory: source
+        run: node scripts/check-polyglot-governance.mjs
+
+      - name: Verify TypeScript runtime
+        working-directory: source/src/typescript
+        run: |
+          npm install --ignore-scripts
+          npm test
+          npm run build
+
+      - name: Verify Go runtime
+        working-directory: source/src/go
+        run: go test -race ./...
+
+      - name: Verify Rust runtime
+        working-directory: source/src/rust
+        run: cargo test --all-targets
+
+      - name: Verify Gleam runtime
+        working-directory: source/src/gleam
+        run: gleam test
