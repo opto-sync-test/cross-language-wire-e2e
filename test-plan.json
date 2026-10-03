@@ -25,7 +25,7 @@
       "fullName": "opto-sync/opto-sync-clients",
       "exists": true,
       "branch": "main",
-      "sha": "c93672ebfe7659243cafcd9d108ab4f17f2b2a87",
+      "sha": "fdf4fad9e2e841f66ecee19fca3b408d5fa7fa4c",
       "visibility": "public"
     }
   ],
@@ -35,6 +35,9 @@
     "immutableSourcePins": true,
     "pullRequestCredentials": false,
     "leastPrivilege": true,
-    "redactSecretsAndRawMedia": true
+    "redactSecretsAndRawMedia": true,
+    "protectedSourceIntegration": true,
+    "protectedSourceIntegrationStatus": "not-executed-unless-protected-lane-runs",
+    "productOverlayPreserved": true
   }
 }
